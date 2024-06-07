@@ -1,0 +1,154 @@
+x-service: &servarr-service
+    restart: unless-stopped
+    networks:
+        - media-network
+    environment: &default_env
+        PUID: ${PUID}
+        PGID: ${PGID}
+        LOG_LEVEL: debug
+        TZ: ${TZ}
+
+services:
+    # Media player
+    emby:
+        <<: *servarr-service
+        image: linuxserver/emby:latest
+        container_name: emby
+        volumes:
+            - ${CONFIG_PATH:-./config}/emby:/config
+            - ${DATA_PATH}:/data
+            - ./lib:/opt/vc/lib
+        ports:
+            - 8096:8096
+            - 8920:8920
+
+    # Requests manager
+    jellyseerr:
+        <<: *servarr-service
+        image: fallenbagel/jellyseerr:latest
+        container_name: jellyseerr
+        ports:
+            - 5055:5055
+        volumes:
+            - ${CONFIG_PATH:-./config}/jellyseerr:/app/config
+
+    # Indexers
+    radarr: # Movies
+        <<: *servarr-service
+        image: linuxserver/radarr:latest
+        container_name: radarr
+        volumes:
+            - ${CONFIG_PATH:-./config}/radarr:/config
+            - ${DATA_PATH}:/data
+        ports:
+            - 7878:7878
+
+    # readarr: # Books
+    #     <<: *servarr-service
+    #     image: linuxserver/readarr:develop
+    #     container_name: readarr
+    #     volumes:
+    #         - ${CONFIG_PATH:-./config}/readarr:/config
+    #         - ${DATA_PATH}:/data
+    #     ports:
+    #         - 8787:8787
+
+    sonarr: #Series
+        <<: *servarr-service
+        image: linuxserver/sonarr:latest
+        container_name: sonarr
+        volumes:
+            - ${CONFIG_PATH:-./config}/sonarr:/config
+            - ${DATA_PATH}:/data
+        ports:
+            - 8989:8989
+
+    # lidarr: # Music
+    #     <<: *servarr-service
+    #     image: linuxserver/lidarr:latest
+    #     container_name: lidarr
+    #     volumes:
+    #         - ${CONFIG_PATH:-./config}/lidarr:/config
+    #         - ${DATA_PATH}:/data
+    #     ports:
+    #         - 8686:8686
+
+    bazarr: # Subtitles
+        <<: *servarr-service
+        image: linuxserver/bazarr:latest
+        container_name: bazarr
+        volumes:
+            - ${CONFIG_PATH:-./config}/bazarr:/config
+            - ${DATA_PATH}:/data
+        ports:
+            - 6767:6767
+
+    # Indexers manager
+    prowlarr:
+        <<: *servarr-service
+        image: linuxserver/prowlarr:latest
+        container_name: prowlarr
+        volumes:
+            - ${CONFIG_PATH:-./config}/prowlarr:/config
+        ports:
+            - 9696:9696
+
+    # Download clients
+    deluge: # Torrent
+        <<: *servarr-service
+        image: linuxserver/deluge:latest
+        container_name: deluge
+        volumes:
+            - ${CONFIG_PATH:-./config}/deluge:/config
+            - ${DATA_PATH}:/data
+        ports:
+            - 8112:8112
+            - 6881:6881
+            - 6881:6881/udp
+            - 58846:58846 #optional
+
+    # nzbget: # usenet
+    #     <<: *servarr-service
+    #     image: linuxserver/nzbget:latest
+    #     container_name: nzbget
+    #     volumes:
+    #         - ${CONFIG_PATH:-./config}/nzbget:/config
+    #         - ${DATA_PATH}:/data
+    #     ports:
+    #         - 6789:6789
+
+    flaresolverr: # Cloudflare bypass
+        <<: *servarr-service
+        image: ghcr.io/flaresolverr/flaresolverr:latest
+        container_name: flaresolverr
+        environment:
+            <<: *default_env
+            LOG_LEVEL: info
+            LOG_HTML: ${LOG_HTML:-false}
+            CAPTCHA_SOLVER: ${CAPTCHA_SOLVER:-none}
+        ports:
+            - 8191:8191
+
+    doplarr: # Discord bot
+        <<: *servarr-service
+        image: lscr.io/linuxserver/doplarr:latest
+        container_name: doplarr
+        environment:
+            <<: *default_env
+            DISCORD__TOKEN: ${DISCORD__TOKEN}
+            OVERSEERR__API: ${OVERSEERR__API}
+            OVERSEERR__URL: ${OVERSEERR__URL:-http://jellyseer:5055}
+            RADARR__API: ${RADARR__API}
+            RADARR__URL: ${RADARR__URL:-http://radarr:7878}
+            SONARR__API: ${SONARR__API}
+            SONARR__URL: ${SONARR__URL:-http://sonarr:8989}
+            DISCORD__MAX_RESULTS: ${DISCORD__MAX_RESULTS:-10} #optional
+            DISCORD__REQUESTED_MSG_STYLE: ${DISCORD__REQUESTED_MSG_STYLE:-:embed} #optional
+            OVERSEERR__DEFAULT_ID: #optional
+            PARTIAL_SEASONS: ${PARTIAL_SEASONS:-true} #optional
+            LOG_LEVEL: :info #optional
+        volumes:
+            - ${CONFIG_PATH:-./config}/doplarr:/config
+
+networks:
+    media-network:
