@@ -3,8 +3,8 @@ x-service: &servarr-service
     networks:
         - media-network
     environment: &default_env
-        PUID: ${PUID}
-        PGID: ${PGID}
+        PUID: ${PUID:-1000}
+        PGID: ${PGID:-1000}
         LOG_LEVEL: debug
         TZ: ${TZ}
 
@@ -43,17 +43,17 @@ services:
         ports:
             - 7878:7878
 
-    # readarr: # Books
-    #     <<: *servarr-service
-    #     image: linuxserver/readarr:develop
-    #     container_name: readarr
-    #     volumes:
-    #         - ${CONFIG_PATH:-./config}/readarr:/config
-    #         - ${DATA_PATH}:/data
-    #     ports:
-    #         - 8787:8787
+    readarr: # Books
+        <<: *servarr-service
+        image: linuxserver/readarr:develop
+        container_name: readarr
+        volumes:
+            - ${CONFIG_PATH:-./config}/readarr:/config
+            - ${DATA_PATH}:/data
+        ports:
+            - 8787:8787
 
-    sonarr: #Series
+    sonarr: # Series
         <<: *servarr-service
         image: linuxserver/sonarr:latest
         container_name: sonarr
@@ -63,15 +63,25 @@ services:
         ports:
             - 8989:8989
 
-    # lidarr: # Music
+    lidarr: # Music
+        <<: *servarr-service
+        image: linuxserver/lidarr:latest
+        container_name: lidarr
+        volumes:
+            - ${CONFIG_PATH:-./config}/lidarr:/config
+            - ${DATA_PATH}:/data
+        ports:
+            - 8686:8686
+
+    # whisparr: # Porn
     #     <<: *servarr-service
-    #     image: linuxserver/lidarr:latest
-    #     container_name: lidarr
+    #     image: hotio/whisparr
+    #     container_name: whisparr
     #     volumes:
-    #         - ${CONFIG_PATH:-./config}/lidarr:/config
+    #         - ${CONFIG_PATH:-./config}/whisparr:/config
     #         - ${DATA_PATH}:/data
     #     ports:
-    #         - 8686:8686
+    #         - 6969:6969
 
     bazarr: # Subtitles
         <<: *servarr-service
@@ -94,18 +104,19 @@ services:
             - 9696:9696
 
     # Download clients
-    deluge: # Torrent
-        <<: *servarr-service
-        image: linuxserver/deluge:latest
-        container_name: deluge
-        volumes:
-            - ${CONFIG_PATH:-./config}/deluge:/config
-            - ${DATA_PATH}:/data
-        ports:
-            - 8112:8112
-            - 6881:6881
-            - 6881:6881/udp
-            - 58846:58846 #optional
+    # deluge: # Torrent
+    #     <<: *servarr-service
+    #     image: linuxserver/deluge:latest
+    #     container_name: deluge
+    #     volumes:
+    #         - ${CONFIG_PATH:-./config}/deluge:/config
+    #         - ${DATA_PATH}:/data
+    #     ports:
+    #         - 8112:8112
+    #         - 6881:6881
+    #         - 6881:6881/udp
+    #         - 6900-6968:6900-6968
+    #         - 34384:34384
 
     # nzbget: # usenet
     #     <<: *servarr-service
@@ -117,21 +128,32 @@ services:
     #     ports:
     #         - 6789:6789
 
-    flaresolverr: # Cloudflare bypass
+    rdtclient: # alldebrid / real-debrid client
         <<: *servarr-service
-        image: ghcr.io/flaresolverr/flaresolverr:latest
-        container_name: flaresolverr
-        environment:
-            <<: *default_env
-            LOG_LEVEL: info
-            LOG_HTML: ${LOG_HTML:-false}
-            CAPTCHA_SOLVER: ${CAPTCHA_SOLVER:-none}
+        image: rogerfar/rdtclient
+        container_name: rdtclient
+        volumes:
+            - ${DATA_PATH}:/data
         ports:
-            - 8191:8191
+            - 6500:6500
+
+    # flaresolverr: # Cloudflare bypass
+    #     <<: *servarr-service
+    #     image: ghcr.io/flaresolverr/flaresolverr:pr-1282
+    #     container_name: flaresolverr
+    #     environment:
+    #         <<: *default_env
+    #         LOG_LEVEL: info
+    #         LOG_HTML: ${LOG_HTML:-false}
+    #         CAPTCHA_SOLVER: ${CAPTCHA_SOLVER:-none}
+    #         # CHROME_ARGS: --headless --disable-gpu --no-sandbox --disable-setuid-sandbox
+    #         DNS: 1.1.1.1
+    #     ports:
+    #         - 8191:8191
 
     doplarr: # Discord bot
         <<: *servarr-service
-        image: lscr.io/linuxserver/doplarr:latest
+        image: linuxserver/doplarr:latest
         container_name: doplarr
         environment:
             <<: *default_env
