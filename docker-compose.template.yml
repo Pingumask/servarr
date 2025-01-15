@@ -7,6 +7,11 @@ x-service: &servarr-service
         PGID: ${PGID:-1000}
         LOG_LEVEL: debug
         TZ: ${TZ}
+    deploy:
+        resources:
+            limits:
+                cpus: "0.1"
+                memory: "200M"
 
 services:
     # Media player
@@ -21,6 +26,11 @@ services:
         ports:
             - 8096:8096
             - 8920:8920
+        deploy:
+            resources:
+                limits:
+                    cpus: "1"
+                    memory: "1g"
 
     # Requests manager
     jellyseerr:
@@ -134,8 +144,14 @@ services:
         container_name: rdtclient
         volumes:
             - ${DATA_PATH}:/data
+            - ${CONFIG_PATH:-./config/}/rdtclient:/data/db
         ports:
             - 6500:6500
+        deploy:
+            resources:
+                limits:
+                    cpus: "0.5"
+                    memory: "500M"
 
     # flaresolverr: # Cloudflare bypass
     #     <<: *servarr-service
