@@ -10,8 +10,8 @@ x-service: &servarr-service
     deploy:
         resources:
             limits:
-                cpus: "0.1"
-                memory: "200M"
+                cpus: "0.2"
+                memory: "0.5g"
 
 services:
     # Media player
@@ -29,14 +29,18 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "1"
-                    memory: "1g"
+                    cpus: "2"
+                    memory: "1.5g"
 
     # Requests manager
     jellyseerr:
         <<: *servarr-service
         image: fallenbagel/jellyseerr:latest
         container_name: jellyseerr
+        depends_on:
+            - radarr
+            - sonarr
+            - emby
         ports:
             - 5055:5055
         volumes:
@@ -47,61 +51,71 @@ services:
         <<: *servarr-service
         image: linuxserver/radarr:latest
         container_name: radarr
+        depends_on:
+            - prowlarr
+            - rdtclient
         volumes:
             - ${CONFIG_PATH:-./config}/radarr:/config
             - ${DATA_PATH}:/data
         ports:
             - 7878:7878
 
-    readarr: # Books
-        <<: *servarr-service
-        image: linuxserver/readarr:develop
-        container_name: readarr
-        volumes:
-            - ${CONFIG_PATH:-./config}/readarr:/config
-            - ${DATA_PATH}:/data
-        ports:
-            - 8787:8787
+    # readarr: # Books
+    #     <<: *servarr-service
+    #     image: linuxserver/readarr:develop
+    #     container_name: readarr
+    #     depends_on:
+    #         - prowlarr
+    #         - rdtclient
+    #     volumes:
+    #         - ${CONFIG_PATH:-./config}/readarr:/config
+    #         - ${DATA_PATH}:/data
+    #     ports:
+    #         - 8787:8787
 
     sonarr: # Series
         <<: *servarr-service
         image: linuxserver/sonarr:latest
         container_name: sonarr
+        depends_on:
+            - prowlarr
+            - rdtclient
         volumes:
             - ${CONFIG_PATH:-./config}/sonarr:/config
             - ${DATA_PATH}:/data
         ports:
             - 8989:8989
+        deploy:
+            resources:
+                limits:
+                    cpus: "0.5"
+                    memory: "1g"
 
-    lidarr: # Music
-        <<: *servarr-service
-        image: linuxserver/lidarr:latest
-        container_name: lidarr
-        volumes:
-            - ${CONFIG_PATH:-./config}/lidarr:/config
-            - ${DATA_PATH}:/data
-        ports:
-            - 8686:8686
-
-    # whisparr: # Porn
+    # lidarr: # Music
     #     <<: *servarr-service
-    #     image: hotio/whisparr
-    #     container_name: whisparr
+    #     image: linuxserver/lidarr:latest
+    #     container_name: lidarr
+    #     depends_on:
+    #         - prowlarr
+    #         - rdtclient
     #     volumes:
-    #         - ${CONFIG_PATH:-./config}/whisparr:/config
+    #         - ${CONFIG_PATH:-./config}/lidarr:/config
     #         - ${DATA_PATH}:/data
     #     ports:
-    #         - 6969:6969
+    #         - 8686:8686
 
-    bazarr: # Subtitles
-        <<: *servarr-service
-        image: linuxserver/bazarr:latest
-        container_name: bazarr
-        volumes:
-            - ${CONFIG_PATH:-./config}/bazarr:/config
-            - ${DATA_PATH}:/data
-        ports:
-            - 6767:6767
+    # bazarr: # Subtitles
+    #     <<: *servarr-service
+    #     image: linuxserver/bazarr:latest
+    #     container_name: bazarr
+    #     depends_on:
+    #         - prowlarr
+    #         - rdtclient
+    #     volumes:
+    #         - ${CONFIG_PATH:-./config}/bazarr:/config
+    #         - ${DATA_PATH}:/data
+    #     ports:
+    #         - 6767:6767
 
     # Indexers manager
     prowlarr:
@@ -142,6 +156,8 @@ services:
         <<: *servarr-service
         image: rogerfar/rdtclient
         container_name: rdtclient
+        depends_on:
+            - aria2c
         volumes:
             - ${DATA_PATH}:/data
             - ${CONFIG_PATH:-./config/}/rdtclient:/data/db
@@ -151,7 +167,16 @@ services:
             resources:
                 limits:
                     cpus: "0.5"
-                    memory: "500M"
+                    memory: "1g"
+
+    aria2c:
+        container_name: aria2c
+        image: hsiaoshun/aria2c
+        volumes:
+            - '${DATA_PATH}/Telechargements:/downloads'
+        ports:
+            - 8000:80
+            - 6800:6800
 
     # flaresolverr: # Cloudflare bypass
     #     <<: *servarr-service
@@ -167,26 +192,26 @@ services:
     #     ports:
     #         - 8191:8191
 
-    doplarr: # Discord bot
-        <<: *servarr-service
-        image: linuxserver/doplarr:latest
-        container_name: doplarr
-        environment:
-            <<: *default_env
-            DISCORD__TOKEN: ${DISCORD__TOKEN}
-            OVERSEERR__API: ${OVERSEERR__API}
-            OVERSEERR__URL: ${OVERSEERR__URL:-http://jellyseer:5055}
-            RADARR__API: ${RADARR__API}
-            RADARR__URL: ${RADARR__URL:-http://radarr:7878}
-            SONARR__API: ${SONARR__API}
-            SONARR__URL: ${SONARR__URL:-http://sonarr:8989}
-            DISCORD__MAX_RESULTS: ${DISCORD__MAX_RESULTS:-10} #optional
-            DISCORD__REQUESTED_MSG_STYLE: ${DISCORD__REQUESTED_MSG_STYLE:-:embed} #optional
-            OVERSEERR__DEFAULT_ID: #optional
-            PARTIAL_SEASONS: ${PARTIAL_SEASONS:-true} #optional
-            LOG_LEVEL: :info #optional
-        volumes:
-            - ${CONFIG_PATH:-./config}/doplarr:/config
+    # doplarr: # Discord bot
+    #     <<: *servarr-service
+    #     image: linuxserver/doplarr:latest
+    #     container_name: doplarr
+    #     environment:
+    #         <<: *default_env
+    #         DISCORD__TOKEN: ${DISCORD__TOKEN}
+    #         OVERSEERR__API: ${OVERSEERR__API}
+    #         OVERSEERR__URL: ${OVERSEERR__URL:-http://jellyseer:5055}
+    #         RADARR__API: ${RADARR__API}
+    #         RADARR__URL: ${RADARR__URL:-http://radarr:7878}
+    #         SONARR__API: ${SONARR__API}
+    #         SONARR__URL: ${SONARR__URL:-http://sonarr:8989}
+    #         DISCORD__MAX_RESULTS: ${DISCORD__MAX_RESULTS:-10} #optional
+    #         DISCORD__REQUESTED_MSG_STYLE: ${DISCORD__REQUESTED_MSG_STYLE:-:embed} #optional
+    #         OVERSEERR__DEFAULT_ID: #optional
+    #         PARTIAL_SEASONS: ${PARTIAL_SEASONS:-true} #optional
+    #         LOG_LEVEL: :info #optional
+    #     volumes:
+    #         - ${CONFIG_PATH:-./config}/doplarr:/config
 
 networks:
     media-network:
